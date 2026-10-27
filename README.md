@@ -58,7 +58,7 @@ npm run dist:mac:dmg    # 선택: macOS DMG 생성
 Node.js 22 이상을 설치한 뒤, 터미널에서 소스 폴더로 이동합니다. 현재 Mac 작업 폴더에서는 다음 명령을 실행하세요.
 
 ```bash
-cd /Users/1112315/test/syb
+cd "프로젝트 설치 디렉토리"
 npm ci
 npm start
 ```
