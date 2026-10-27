@@ -43,7 +43,7 @@ button { color: inherit; }
 
 .tabs {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -91,6 +91,7 @@ button { color: inherit; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab-scroll { flex: none; width: 26px; height: 32px; }
 .tab-scroll[hidden] { display: none; }
+.tab-strip-spacer { flex: 1; align-self: stretch; }
 
 .toolbar {
   height: 46px;
