@@ -1,0 +1,26 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('syBrowser', {
+  getState: () => ipcRenderer.invoke('browser:get-state'),
+  saveSettings: (settings) => ipcRenderer.invoke('browser:save-settings', settings),
+  fillPassword: () => ipcRenderer.invoke('browser:fill-password'),
+  deletePassword: (id) => ipcRenderer.invoke('browser:delete-password', id),
+  revealDownload: (id) => ipcRenderer.invoke('browser:reveal-download', id),
+  cancelDownload: (id) => ipcRenderer.invoke('browser:cancel-download', id),
+  resumeDownload: (id) => ipcRenderer.invoke('browser:resume-download', id),
+  showSettings: (open) => ipcRenderer.invoke('browser:show-settings', open),
+  showDownloads: (open) => ipcRenderer.invoke('browser:show-downloads', open),
+  onPanelOpen: (callback) => ipcRenderer.on('browser:panel-open', (_event, panel) => callback(panel)),
+  newTab: (url) => ipcRenderer.invoke('browser:new-tab', url),
+  activateTab: (id) => ipcRenderer.invoke('browser:activate-tab', id),
+  closeTab: (id) => ipcRenderer.invoke('browser:close-tab', id),
+  navigate: (address) => ipcRenderer.invoke('browser:navigate', address),
+  back: () => ipcRenderer.invoke('browser:back'),
+  forward: () => ipcRenderer.invoke('browser:forward'),
+  reload: () => ipcRenderer.invoke('browser:reload'),
+  stop: () => ipcRenderer.invoke('browser:stop'),
+  home: () => ipcRenderer.invoke('browser:home'),
+  toggleBookmark: () => ipcRenderer.invoke('browser:toggle-bookmark'),
+  onState: (callback) => ipcRenderer.on('browser:state', (_event, state) => callback(state)),
+  onFocusAddress: (callback) => ipcRenderer.on('browser:focus-address', callback),
+});

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>simple-browser</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="browser-chrome">
+      <div class="tab-strip">
+        <button id="tabs-left" class="icon-button tab-scroll" aria-label="이전 탭 보기" title="이전 탭 보기" hidden>‹</button>
+        <div id="tabs" class="tabs" role="tablist" aria-label="열린 탭"></div>
+        <button id="tabs-right" class="icon-button tab-scroll" aria-label="다음 탭 보기" title="다음 탭 보기" hidden>›</button>
+        <button id="new-tab" class="icon-button new-tab" aria-label="새 탭" title="새 탭 (⌘T)">+</button>
+      </div>
+      <div class="toolbar">
+        <button id="back" class="icon-button" aria-label="뒤로" title="뒤로">←</button>
+        <button id="forward" class="icon-button" aria-label="앞으로" title="앞으로">→</button>
+        <button id="reload" class="icon-button" aria-label="새로고침" title="새로고침 (⌘R)">↻</button>
+        <button id="home" class="icon-button" aria-label="홈" title="홈페이지">⌂</button>
+        <form id="address-form" class="address-form">
+          <span class="security-indicator" aria-hidden="true">●</span>
+          <input id="address" type="text" autocomplete="off" spellcheck="false" aria-label="주소 또는 검색어" placeholder="검색하거나 주소 입력" />
+          <button id="bookmark" type="button" class="bookmark-button" aria-label="북마크 추가" title="북마크 추가">☆</button>
+        </form>
+        <button id="password-button" class="icon-button" aria-label="저장된 암호 채우기" title="저장된 암호 채우기">🔑</button>
+        <button id="downloads-button" class="icon-button" aria-label="다운로드" title="다운로드">↓</button>
+        <button id="settings-button" class="icon-button" aria-label="설정" title="설정">⚙</button>
+      </div>
+      <nav id="bookmarks" class="bookmarks" aria-label="북마크"></nav>
+    </header>
+    <main id="settings-panel" hidden>
+      <form id="settings-form" class="settings-card">
+        <img src="assets/icon.png" width="64" height="64" alt="" />
+        <h1>설정</h1>
+        <p>simple-browser를 나에게 맞게 설정하세요.</p>
+        <label for="homepage">홈페이지 주소</label>
+        <input id="homepage" type="url" placeholder="https://www.google.com" />
+        <small>홈 버튼을 누르면 이 주소를 엽니다. 비워 두면 새 탭 화면을 엽니다.</small>
+        <label class="toggle-row"><span>광고 제거 <small>네이버 검색 광고 카드와 알려진 광고 서버를 차단합니다.</small></span><input id="block-ads" type="checkbox" /></label>
+        <p class="settings-note">기본 검색: Google<br />광고 제거를 켜거나 끄면 현재 페이지에도 적용됩니다. 차단된 광고를 다시 불러오려면 새로고침하세요.</p>
+        <p id="settings-error" role="alert"></p>
+        <section id="password-section"><h2>저장된 암호</h2><p id="password-storage-status"></p><div id="password-list"></div></section>
+        <div class="settings-actions"><button id="settings-cancel" type="button">닫기</button><button type="submit">저장</button></div>
+      </form>
+    </main>
+    <main id="downloads-panel" hidden>
+      <section class="settings-card" aria-labelledby="downloads-title">
+        <h1 id="downloads-title">다운로드</h1>
+        <p>이번 실행에서 받은 파일입니다.</p>
+        <div id="download-list" aria-live="polite"></div>
+        <div class="settings-actions"><button id="downloads-close" type="button">닫기</button></div>
+      </section>
+    </main>
+    <script src="renderer.js"></script>
+  </body>
+</html>
