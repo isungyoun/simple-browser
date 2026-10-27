@@ -1,0 +1,3 @@
+Built-in ImageGen. Use case: logo-brand. macOS application icon for simple-browser. A polished minimal friendly fox face, warm orange with cream cheeks, small dark eyes and nose, subtle sculpted depth, centered on a midnight teal rounded-square tile. Strong silhouette at 32px. No text, letters, globe, browser brands, or watermark. Transparent padding outside the tile.
+Source PNG: src/renderer/assets/icon.png
+macOS icon: build/icon.icns

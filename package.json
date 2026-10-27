@@ -1,0 +1,87 @@
+{
+  "name": "simple-browser",
+  "version": "0.1.5",
+  "description": "A small Chromium-based desktop browser built with Electron.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node scripts/run-electron.js",
+    "dev": "node scripts/run-electron.js --enable-logging",
+    "pack:mac": "electron-builder --mac --dir --arm64",
+    "dist:mac": "electron-builder --mac --dir --arm64 && node scripts/make-mac-dmg.js arm64",
+    "dist:mac:intel": "electron-builder --mac --dir --x64 && node scripts/make-mac-dmg.js x64",
+    "test": "node --test",
+    "test:smoke": "node scripts/run-electron.js --smoke-test",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/navigation.js && node --check src/renderer/renderer.js && node --check src/settings.js && node --check src/adblock.js && node --check src/tab-preload.js && node --check src/password-store.js && node --check src/downloads.js",
+    "dist:win": "electron-builder --win nsis --x64",
+    "dist:mac:dmg": "npm run dist:mac"
+  },
+  "keywords": [
+    "browser",
+    "electron",
+    "chromium"
+  ],
+  "license": "MIT",
+  "build": {
+    "appId": "com.sybrowser.desktop",
+    "productName": "simple-browser",
+    "artifactName": "simple-browser-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "LICENSE"
+    ],
+    "asar": true,
+    "electronLanguages": [
+      "ko",
+      "en",
+      "en-US"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "identity": "-",
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "title": "simple-browser",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "src/renderer/assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "differentialPackage": false
+    }
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "jsdom": "29.1.1"
+  },
+  "productName": "simple-browser"
+}

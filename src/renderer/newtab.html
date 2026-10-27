@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; form-action https://www.google.com" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>새 탭</title>
+    <link rel="stylesheet" href="newtab.css" />
+  </head>
+  <body>
+    <main>
+      <img class="mark" src="assets/icon.png" alt="" />
+      <h1>simple-browser</h1>
+      <p>가볍고 단순한 나만의 브라우저</p>
+      <form action="https://www.google.com/search" method="get">
+        <span aria-hidden="true">⌕</span>
+        <input name="q" type="search" autocomplete="off" autofocus aria-label="웹 검색" placeholder="Google에서 검색" />
+      </form>
+    </main>
+  </body>
+</html>
