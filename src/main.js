@@ -349,7 +349,9 @@ function createTab(rawUrl, loadOptions, loadInitialPage = true, popupOptions = {
   tabs.set(id, tab);
   attachTabEvents(tab);
   activateTab(id);
-  if (loadInitialPage) loadPage(view.webContents, rawUrl ? normalizeAddress(rawUrl) : newTabUrl, loadOptions);
+  // Startup, the new-tab button and replacing the last closed tab all open the
+  // homepage when one is set; otherwise the built-in new tab page.
+  if (loadInitialPage) loadPage(view.webContents, rawUrl ? normalizeAddress(rawUrl) : (settings.homepage || newTabUrl), loadOptions);
   return id;
 }
 
@@ -571,6 +573,20 @@ async function runSmokeTest() {
       await contents.loadURL(`http://127.0.0.1:${server.address().port}/early-ad`);
       assert.deepEqual(await contents.executeJavaScript('({ installed: window.earlyInstalled, display: window.earlyDisplay })'), { installed: true, display: 'none' });
     } finally { settings.blockAds = savedBlockAds; }
+    const savedHomepage = settings.homepage;
+    try {
+      settings.homepage = `http://127.0.0.1:${server.address().port}/`;
+      const homeTab = createTab();
+      await new Promise((resolve) => tabs.get(homeTab).view.webContents.once('did-finish-load', resolve));
+      assert.equal(tabs.get(homeTab).view.webContents.getURL(), settings.homepage);
+      closeTab(homeTab);
+      settings.homepage = '';
+      const blankTab = createTab();
+      await new Promise((resolve) => tabs.get(blankTab).view.webContents.once('did-finish-load', resolve));
+      assert.equal(tabs.get(blankTab).view.webContents.getURL(), newTabUrl);
+      closeTab(blankTab);
+      activateTab(first);
+    } finally { settings.homepage = savedHomepage; }
     assert.equal(await contents.executeJavaScript('typeof process'), 'undefined');
     await contents.session.cookies.set({ url: `http://127.0.0.1:${server.address().port}/`, name: 'popup-session', value: 'present' });
     const openAndCheckPopup = async (script) => {
