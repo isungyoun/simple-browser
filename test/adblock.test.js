@@ -108,3 +108,17 @@ test('hides Google shopping ads with their heading but keeps organic results', (
     assert.equal(hidden(dom.window.document.querySelector('#rso')), false);
   } finally { dom.window.close(); }
 });
+
+test('hides Naver Pay shopping recommendation and extra-reward ad panels', () => {
+  const dom = new JSDOM(`<div id="order">주문 상세</div>
+    <div id="panel" class="BottomAds_area-panel__e_khY"><div class="AiTEMS_article__B_fo6" data-nlog-area="shopping_recommendation_after_pay">
+      <strong>현관 보안 용품도 함께 준비하세요</strong><a href="https://example.com/item">상품</a></div></div>
+    <div id="benefits" class="AdditionalBenefits_article__2B0_X"><strong>추가적립 혜택</strong><a href="https://point.pay.naver.com/bridge">적립받기</a></div>`,
+  { url: 'https://orders.pay.naver.com/order/status/1', runScripts: 'outside-only' });
+  try {
+    dom.window.eval(script);
+    assert.equal(hidden(dom.window.document.querySelector('#panel')), true);
+    assert.equal(hidden(dom.window.document.querySelector('#benefits')), true);
+    assert.equal(hidden(dom.window.document.querySelector('#order')), false);
+  } finally { dom.window.close(); }
+});

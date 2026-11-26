@@ -1,15 +1,14 @@
 # simple-browser
 
-**최신 설치 파일 다운로드: [GitHub Releases (최신 버전)](https://github.com/isungyoun/simple-browser/releases/latest)** — Mac PKG·DMG, Windows EXE
+**최신 설치 파일 다운로드: [GitHub Releases (최신 버전)](https://github.com/isungyoun/simple-browser/releases/latest)** — Mac PKG, Windows EXE
 
 Electron/Chromium 기반의 가벼운 데스크톱 브라우저입니다. 설치 버전은 Node.js나 터미널 없이 실행됩니다.
 
 ## 설치 파일
 
-- Apple Silicon Mac 설치 PKG: `dist/simple-browser-0.1.9-mac-arm64.pkg` — 더블클릭해 설치합니다. 기존 앱은 대치 확인 없이 업그레이드됩니다.
-- Apple Silicon Mac 설치 DMG: `dist/simple-browser-0.1.9-mac-arm64.dmg` — 열어서 `simple-browser.app`을 `Applications`로 드래그합니다.
+- Apple Silicon Mac 설치 PKG: `dist/simple-browser-0.1.10-mac-arm64.pkg` — 더블클릭해 설치합니다. 기존 앱은 대치 확인 없이 업그레이드됩니다.
 
-- Windows 64비트: `dist/simple-browser-0.1.9-win-x64.exe`
+- Windows 64비트: `dist/simple-browser-0.1.10-win-x64.exe`
 
 Mac 빌드는 로컬 테스트용 ad-hoc 서명을 사용하며 Apple 공증은 포함하지 않습니다. Windows 빌드는 배포 인증서 서명을 포함하지 않습니다. 정식 외부 배포 시 인증서와 공증 설정을 추가해야 합니다.
 
@@ -44,15 +43,14 @@ npm run test:smoke
 ```
 
 ```bash
-npm run dist            # Mac(Apple Silicon) DMG·PKG + Windows EXE를 한 번에
+npm run dist            # Mac(Apple Silicon) PKG + Windows EXE를 한 번에
 npm run release         # 커밋·푸시 후 최신 설치 파일을 GitHub Releases에 올리고 이전 버전 삭제 (gh 로그인 필요)
-npm run dist:mac        # Apple Silicon 앱·DMG·PKG (macOS에서 실행)
-npm run dist:mac:intel  # Intel Mac 앱·DMG·PKG (macOS에서 실행)
+npm run dist:mac        # Apple Silicon 앱·PKG (macOS에서 실행)
+npm run dist:mac:intel  # Intel Mac 앱·PKG (macOS에서 실행)
 npm run dist:win        # Windows x64 NSIS 설치 파일
-npm run dist:mac:dmg    # 선택: macOS DMG·PKG 생성 (dist:mac과 같음)
 ```
 
-`npm run pack:mac`은 앱 번들만 생성합니다. Mac DMG는 HFS+ 이미지를 직접 생성한 다음 압축해 만듭니다. 이미지 생성 과정에서 추가되는 Finder 메타데이터를 정리한 뒤 앱 서명과 이미지 체크섬을 검증합니다. Mac PKG는 같은 앱으로 `pkgbuild`/`productbuild`를 사용해 만들며, 항상 `/Applications`에 설치되도록 재배치를 끕니다. 빌드가 끝나면 빌드 폴더의 앱은 `dist/mac-arm64.noindex`로 옮겨져 Launchpad·앱 목록에 중복 표시되지 않습니다. ZIP 파일과 중간 ZIP은 생성하지 않습니다. Windows는 차등 업데이트 패키지를 비활성화해 blockmap 파일도 생성하지 않습니다. 배포 파일은 DMG·PKG와 EXE만 제공합니다. Windows 빌드는 Windows에서 실행하거나 electron-builder가 지원하는 교차 빌드 환경에서 실행합니다.
+`npm run pack:mac`은 앱 번들만 생성합니다. Mac PKG는 빌드한 앱의 서명을 검증한 뒤 `pkgbuild`/`productbuild`로 만들며, 항상 `/Applications`에 설치되도록 재배치를 끕니다. 빌드가 끝나면 빌드 폴더의 앱은 `dist/mac-arm64.noindex`로 옮겨져 Launchpad·앱 목록에 중복 표시되지 않습니다. ZIP 파일과 중간 ZIP은 생성하지 않습니다. Windows는 차등 업데이트 패키지를 비활성화해 blockmap 파일도 생성하지 않습니다. 배포 파일은 Mac PKG와 Windows EXE만 제공하며 DMG는 만들지 않습니다. Windows 빌드는 Windows에서 실행하거나 electron-builder가 지원하는 교차 빌드 환경에서 실행합니다.
 
 실행 스크립트는 개발 도구가 설정한 `ELECTRON_RUN_AS_NODE`를 제거하므로 Electron이 Node 모드로 잘못 시작되는 문제를 방지합니다. 개발 실행은 Electron 실행 파일을 사용하지만 설치 후에는 `simple-browser.app` / `simple-browser.exe`를 사용합니다.
 
@@ -107,7 +105,7 @@ npm run test:smoke  # 실제 앱 창에서 통합 테스트 후 자동 종료
 
 ### 4. Node.js 없이 설치 버전 확인
 
-Mac에서는 `dist/simple-browser-0.1.9-mac-arm64.pkg`를 더블클릭해 설치하는 방법을 권장합니다. 이미 설치된 앱이 있으면 대치 확인 없이 업그레이드되고 북마크·설정·저장된 암호는 유지됩니다. 서명되지 않은 패키지라 다른 Mac에서 내려받은 경우 "확인되지 않은 개발자" 경고가 나오면 우클릭 → 열기로 실행합니다. DMG를 쓸 때는 `dist/simple-browser-0.1.9-mac-arm64.dmg`를 열고 `simple-browser.app`을 `Applications`로 드래그합니다(기존 앱이 있으면 "대치"를 선택). 복사가 끝나면 이미지를 추출하고 응용 프로그램 폴더에서 실행합니다. Apple Silicon Mac용입니다. Windows에서는 `dist/simple-browser-0.1.9-win-x64.exe`를 실행해 설치합니다. 이미 이전 버전이 실행 중이면 완전히 종료한 뒤 새 버전을 실행하세요.
+Mac에서는 `dist/simple-browser-0.1.10-mac-arm64.pkg`를 더블클릭해 설치합니다. 이미 설치된 앱이 있으면 대치 확인 없이 업그레이드되고 북마크·설정·저장된 암호는 유지됩니다. 서명되지 않은 패키지라 다른 Mac에서 내려받은 경우 "확인되지 않은 개발자" 경고가 나오면 우클릭 → 열기로 실행합니다. Apple Silicon Mac용입니다. Windows에서는 `dist/simple-browser-0.1.10-win-x64.exe`를 실행해 설치합니다. 이미 이전 버전이 실행 중이면 완전히 종료한 뒤 새 버전을 실행하세요.
 
 소스 변경을 설치 버전에 반영하려면 Mac에서 `npm run dist:mac`, Windows용은 `npm run dist:win`으로 다시 빌드합니다. `npm start`는 개발 실행이므로 운영체제 일부 화면에서 기반 실행 파일인 Electron 이름이 남을 수 있습니다. 최종 앱 이름 확인은 설치 버전으로 진행합니다.
 

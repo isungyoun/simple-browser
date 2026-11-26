@@ -1,6 +1,6 @@
 {
   "name": "simple-browser",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "A small Chromium-based desktop browser built with Electron.",
   "main": "src/main.js",
   "type": "commonjs",
@@ -8,15 +8,14 @@
     "start": "node scripts/run-electron.js",
     "dev": "node scripts/run-electron.js --enable-logging",
     "pack:mac": "electron-builder --mac --dir --arm64",
-    "dist:mac": "electron-builder --mac --dir --arm64 && node scripts/make-mac-dmg.js arm64 && node scripts/make-mac-pkg.js arm64",
-    "dist:mac:intel": "electron-builder --mac --dir --x64 && node scripts/make-mac-dmg.js x64 && node scripts/make-mac-pkg.js x64",
+    "dist:mac": "electron-builder --mac --dir --arm64 && node scripts/make-mac-pkg.js arm64",
+    "dist:mac:intel": "electron-builder --mac --dir --x64 && node scripts/make-mac-pkg.js x64",
     "test": "node --test",
     "test:smoke": "node scripts/run-electron.js --smoke-test",
     "check": "node --check src/main.js && node --check src/preload.js && node --check src/navigation.js && node --check src/renderer/renderer.js && node --check src/settings.js && node --check src/adblock.js && node --check src/tab-preload.js && node --check src/password-store.js && node --check src/downloads.js",
     "dist:win": "electron-builder --win nsis --x64",
     "dist": "npm run dist:mac && npm run dist:win",
-    "release": "node scripts/release.js",
-    "dist:mac:dmg": "npm run dist:mac"
+    "release": "node scripts/release.js"
   },
   "keywords": [
     "browser",
@@ -46,25 +45,9 @@
       "category": "public.app-category.productivity",
       "identity": "-",
       "target": [
-        "dmg"
+        "dir"
       ],
       "icon": "build/icon.icns"
-    },
-    "dmg": {
-      "title": "simple-browser",
-      "contents": [
-        {
-          "x": 130,
-          "y": 220,
-          "type": "file"
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
     },
     "win": {
       "target": [

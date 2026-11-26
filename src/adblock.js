@@ -18,7 +18,8 @@
     'ins.adsbygoogle', 'iframe[src*="doubleclick.net"]', 'iframe[src*="googlesyndication.com"]',
     ...(google ? ['#tads', '#tadsb', '#bottomads', '.commercial-unit-desktop-top', '.commercial-unit-desktop-rhs', '.cu-container', '.pla-unit'] : []),
     ...(naver ? [
-      '.ct_snb_banner', '#search-right:has(.link_headline)', '#root > [class*="Layout-module__column_left"] > #feed',
+      '.ct_snb_banner', '[class*="BottomAds_area-panel"]', '[data-nlog-area="shopping_recommendation_after_pay"]', '[class*="AdditionalBenefits_article"]',
+      '#search-right:has(.link_headline)', '#root > [class*="Layout-module__column_left"] > #feed',
       '#power_link', '#biz_site', '.sc_powerlink', '.ad_section', '[data-ad-type="powerlink"]',
       '#shopping:has(iframe[title="shoppingbox"], iframe[src^="https://shopsquare.naver.com/"])',
       naverSlots, `:is([class*="Layout-module__banner_area"], .nbanner_area):has(${naverSlots})`,
@@ -54,6 +55,9 @@
     if (!naver) return;
     // Naver News section banners (AI algorithm, premium contents promotions).
     document.querySelectorAll('.ct_snb_banner').forEach(hide);
+    // Naver Pay order pages: "함께 준비하세요" shopping recommendations and
+    // "추가적립 혜택" click-reward store ads.
+    document.querySelectorAll('[class*="BottomAds_area-panel"], [data-nlog-area="shopping_recommendation_after_pay"], [class*="AdditionalBenefits_article"]').forEach(hide);
     // The small headline creative beside the homepage search box.
     document.querySelectorAll('#search-right .link_headline').forEach((link) => hide(link.closest('#search-right')));
     // Include the homepage recommendation feed at the user's request.

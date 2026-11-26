@@ -6,8 +6,7 @@ const { version, build } = require('../package.json');
 const architecture = process.argv[2] || process.arch;
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'dist');
-// make-mac-dmg.js moves the unpacked app into *.noindex when it finishes.
-const appDirectory = path.join(output, `${architecture === 'arm64' ? 'mac-arm64' : 'mac'}.noindex`);
+const appDirectory = path.join(output, architecture === 'arm64' ? 'mac-arm64' : 'mac');
 const filename = `simple-browser-${version}-mac-${architecture}`;
 const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'simple-browser-pkg-'));
 const payload = path.join(staging, 'payload');
@@ -39,6 +38,13 @@ try {
   const target = path.join(output, `${filename}.pkg`);
   fs.copyFileSync(installer, `${target}.tmp`);
   fs.renameSync(`${target}.tmp`, target);
+  // Spotlight skips *.noindex folders, so the unpacked build app does not show
+  // up next to the installed one in Launchpad/Apps. A rename keeps the existing
+  // index entry, so copy and delete the original instead.
+  const hidden = `${appDirectory}.noindex`;
+  fs.rmSync(hidden, { recursive: true, force: true });
+  fs.cpSync(appDirectory, hidden, { recursive: true, dereference: false, verbatimSymlinks: true, preserveTimestamps: true });
+  fs.rmSync(appDirectory, { recursive: true, force: true });
 } finally {
   fs.rmSync(staging, { recursive: true, force: true });
 }
