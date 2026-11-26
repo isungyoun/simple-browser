@@ -15,6 +15,7 @@
     "check": "node --check src/main.js && node --check src/preload.js && node --check src/navigation.js && node --check src/renderer/renderer.js && node --check src/settings.js && node --check src/adblock.js && node --check src/tab-preload.js && node --check src/password-store.js && node --check src/downloads.js",
     "dist:win": "electron-builder --win nsis --x64",
     "dist": "npm run dist:mac && npm run dist:win",
+    "release": "node scripts/release.js",
     "dist:mac:dmg": "npm run dist:mac"
   },
   "keywords": [

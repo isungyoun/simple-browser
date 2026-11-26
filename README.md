@@ -43,6 +43,7 @@ npm run test:smoke
 
 ```bash
 npm run dist            # Mac(Apple Silicon) DMG·PKG + Windows EXE를 한 번에
+npm run release         # 커밋·푸시 후 최신 설치 파일을 GitHub Releases에 올리고 이전 버전 삭제 (gh 로그인 필요)
 npm run dist:mac        # Apple Silicon 앱·DMG·PKG (macOS에서 실행)
 npm run dist:mac:intel  # Intel Mac 앱·DMG·PKG (macOS에서 실행)
 npm run dist:win        # Windows x64 NSIS 설치 파일
