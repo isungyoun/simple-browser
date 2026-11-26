@@ -104,9 +104,12 @@ function loadSettings() {
   catch { settings = { ...DEFAULT_SETTINGS }; }
 }
 
-async function applyAdBlocking(contents) {
+// The tab preload installs the script at document start; onlyIfMissing keeps
+// the dom-ready call as a fallback without rescanning an installed page.
+async function applyAdBlocking(contents, onlyIfMissing = false) {
   if (contents.isDestroyed() || !/^https?:/i.test(contents.getURL())) return;
-  await contents.executeJavaScript(settings.blockAds ? adblockScript : 'window.__simpleBrowserAdCleanup?.()').catch(() => {});
+  const script = settings.blockAds ? (onlyIfMissing ? `if (!window.__simpleBrowserAdCleanup) {\n${adblockScript}\n}` : adblockScript) : 'window.__simpleBrowserAdCleanup?.()';
+  await contents.executeJavaScript(script).catch(() => {});
 }
 
 async function saveSettings(value) {
@@ -126,6 +129,10 @@ function showSettings(open) {
 function showPanel(panel) {
   if (panel !== null && !['settings', 'downloads'].includes(panel)) return;
   activePanel = panel;
+  // Settings belong to the tab they were opened in; downloads are window-wide
+  // and close when another tab is selected.
+  const tab = tabs.get(activeTabId);
+  if (tab) tab.settingsOpen = panel === 'settings';
   if (panel === 'settings' && !passwordStore.loaded()) {
     passwordStore.available();
     broadcastState();
@@ -268,7 +275,7 @@ function attachTabEvents(tab) {
   });
   contents.on('did-start-loading', changed);
   contents.on('did-stop-loading', changed);
-  contents.on('dom-ready', () => applyAdBlocking(contents));
+  contents.on('dom-ready', () => applyAdBlocking(contents, true));
   contents.on('did-navigate', changed);
   contents.on('did-navigate-in-page', changed);
   contents.on('render-process-gone', (_event, details) => {
@@ -356,9 +363,13 @@ function activateTab(id) {
   }
   activeTabId = tab.id;
   window.contentView.addChildView(tab.view);
-  tab.view.setVisible(!activePanel);
   resizeActiveView();
-  if (!activePanel) tab.view.webContents.focus();
+  const panel = tab.settingsOpen ? 'settings' : null;
+  if (panel !== activePanel) showPanel(panel);
+  else {
+    tab.view.setVisible(!activePanel);
+    if (!activePanel) tab.view.webContents.focus();
+  }
   broadcastState();
 }
 
@@ -516,6 +527,13 @@ async function runSmokeTest() {
       </script>`);
       return;
     }
+    if (request.url === '/early-ad') {
+      // Inline scripts run while parsing, before dom-ready and the first paint.
+      response.end(`<script>window.earlyInstalled = Boolean(window.__simpleBrowserAdCleanup);</script>
+        <ins class="adsbygoogle" id="ad">ad</ins>
+        <script>window.earlyDisplay = getComputedStyle(document.querySelector('#ad')).display;</script>`);
+      return;
+    }
     if (request.url?.startsWith('/popup-check')) {
       response.end(`<title>${request.headers.cookie?.includes('popup-session=present') ? 'popup session preserved' : 'missing session'}</title><h1>popup</h1>`);
       return;
@@ -547,6 +565,12 @@ async function runSmokeTest() {
     const contents = activeContents();
     await contents.loadURL(`http://127.0.0.1:${server.address().port}/`);
     assert.equal(contents.getTitle(), 'sy smoke page');
+    const savedBlockAds = settings.blockAds;
+    settings.blockAds = true;
+    try {
+      await contents.loadURL(`http://127.0.0.1:${server.address().port}/early-ad`);
+      assert.deepEqual(await contents.executeJavaScript('({ installed: window.earlyInstalled, display: window.earlyDisplay })'), { installed: true, display: 'none' });
+    } finally { settings.blockAds = savedBlockAds; }
     assert.equal(await contents.executeJavaScript('typeof process'), 'undefined');
     await contents.session.cookies.set({ url: `http://127.0.0.1:${server.address().port}/`, name: 'popup-session', value: 'present' });
     const openAndCheckPopup = async (script) => {
@@ -672,6 +696,20 @@ async function runSmokeTest() {
       assert.equal(contents.getURL(), `http://127.0.0.1:${server.address().port}/from-panel`);
     }
     assert.equal(tabs.get(first).view.getVisible(), true);
+    showSettings(true);
+    const other = createTab();
+    assert.equal(activePanel, null);
+    assert.equal(tabs.get(other).view.getVisible(), true);
+    activateTab(first);
+    assert.equal(activePanel, 'settings');
+    assert.equal(tabs.get(first).view.getVisible(), false);
+    showPanel('downloads');
+    activateTab(other);
+    assert.equal(activePanel, null);
+    activateTab(first);
+    assert.equal(activePanel, null);
+    closeTab(other);
+    assert.equal(tabs.get(first).view.getVisible(), true);
     const extraTabs = Array.from({ length: 12 }, () => createTab());
     window.setContentSize(900, 820);
     await window.webContents.executeJavaScript('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -709,6 +747,11 @@ function registerIpc() {
 
   ipcMain.handle('browser:get-state', trusted(appState));
   ipcMain.on('password:offer', offerPassword);
+  ipcMain.on('adblock:script', (event) => {
+    const isTab = [...tabs.values()].some((tab) => tab.view.webContents.id === event.sender.id);
+    event.returnValue = isTab && settings.blockAds && event.senderFrame === event.sender.mainFrame &&
+      /^https?:/i.test(event.senderFrame.url) ? adblockScript : null;
+  });
   ipcMain.handle('password:lookup', (event) => {
     const tab = [...tabs.values()].find((tab) => tab.view.webContents.id === event.sender.id);
     if (!tab || event.senderFrame !== event.sender.mainFrame || !passwordStore.available()) return null;

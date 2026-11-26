@@ -8,7 +8,7 @@
 
 ## 배포 파일
 
-- 최종 배포 파일은 macOS `.dmg`와 Windows 설치 `.exe`만 제공한다.
+- 최종 배포 파일은 macOS `.dmg`·`.pkg`와 Windows 설치 `.exe`만 제공한다. `.pkg`는 기존 앱을 대치 확인 없이 `/Applications`에 업그레이드 설치한다.
 - ZIP은 만들지 않는다. 앱 ZIP, 소스 ZIP, 빌드 중간 ZIP 모두 생성하지 않는다.
 - `.blockmap`은 생성하지 않는다. `build.nsis.differentialPackage`는 `false`로 유지한다.
 - Windows NSIS 설치 EXE에 앱을 포함하기 위한 임시 `.nsis.7z`는 허용한다. 빌드 도구가 EXE에 포함한 뒤 자동 삭제하는 정상 중간 파일이다.
@@ -17,8 +17,10 @@
 
 ## 빌드 및 검증
 
-- macOS: `npm run dist:mac` (기본 Apple Silicon), Intel은 요청 시 `npm run dist:mac:intel`.
-- Windows: `npm run dist:win`.
+- 빌드 요청 시 기본으로 Mac과 Windows 설치 파일을 함께 만든다: `npm run dist` (= `dist:mac` + `dist:win`).
+- macOS만: `npm run dist:mac` (기본 Apple Silicon), Intel은 요청 시 `npm run dist:mac:intel`.
+- Windows만: `npm run dist:win`.
 - Mac DMG는 현재의 직접 앱 복사 → HFS+ 이미지 생성 → FinderInfo 정리 및 앱 서명 검증 → DMG 변환·무결성 검사 과정을 유지한다. ZIP 왕복 방식을 다시 넣지 않는다.
+- Mac PKG는 `scripts/make-mac-pkg.js`가 `.noindex`로 옮겨진 빌드 앱으로 만든다. `BundleIsRelocatable`은 `false`로 유지해 항상 `/Applications`에 설치되게 한다.
 - 변경에 맞는 테스트와 패키지 검증을 수행한다. 소스 테스트만으로 실제 계정 로그인이나 Windows 실행까지 확인했다고 말하지 않는다.
 - 완료 시 버전, 설치 파일 링크, 주요 검증 결과를 짧게 알린다.

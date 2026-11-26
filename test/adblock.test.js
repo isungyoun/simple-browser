@@ -83,3 +83,28 @@ test('hides Naver homepage ad wrappers and footer ads while preserving ordinary 
     assert.equal(d.querySelectorAll('[data-simple-browser-ad-hidden]').length, 0);
   } finally { window.close(); }
 });
+
+test('hides Naver News section banners', () => {
+  const dom = new JSDOM(`<div class="ct_snb"><ul><li><a href="/section/100">정치</a></li></ul>
+    <div id="banner" class="ct_snb_banner"><a href="https://media.naver.com/algorithm"><img alt="AI 뉴스 알고리즘"></a></div></div>`,
+  { url: 'https://news.naver.com/section/100', runScripts: 'outside-only' });
+  try {
+    dom.window.eval(script);
+    assert.equal(hidden(dom.window.document.querySelector('#banner')), true);
+    assert.equal(hidden(dom.window.document.querySelector('ul')), false);
+  } finally { dom.window.close(); }
+});
+
+test('hides Google shopping ads with their heading but keeps organic results', () => {
+  const dom = new JSDOM(`<div id="rso">
+    <div id="shopping"><div role="heading"><span>광고: 제품</span></div>
+      <div class="Yi78Pd"><div class="mnr-c pla-unit"><a href="https://link.example/">침대</a></div></div></div>
+    <div id="organic"><div role="heading">침대 추천 기사</div><a href="https://example.com">일반 결과</a></div></div>`,
+  { url: 'https://www.google.com/search?q=침대', runScripts: 'outside-only' });
+  try {
+    dom.window.eval(script);
+    assert.equal(hidden(dom.window.document.querySelector('#shopping')), true);
+    assert.equal(hidden(dom.window.document.querySelector('#organic')), false);
+    assert.equal(hidden(dom.window.document.querySelector('#rso')), false);
+  } finally { dom.window.close(); }
+});

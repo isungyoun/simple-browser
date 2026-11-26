@@ -21,7 +21,7 @@ function setup(html = form, lookup = () => null) {
   vm.runInNewContext(source, {
     require: (name) => {
       assert.equal(name, 'electron');
-      return { ipcRenderer: { send: (channel, value) => messages.push({ channel, value }), invoke: async (channel) => { assert.equal(channel, 'password:lookup'); return lookup(); } } };
+      return { webFrame: {}, ipcRenderer: { sendSync: () => null, send: (channel, value) => messages.push({ channel, value }), invoke: async (channel) => { assert.equal(channel, 'password:lookup'); return lookup(); } } };
     },
     window: w, document: w.document, location: w.location,
     HTMLFormElement: w.HTMLFormElement, HTMLInputElement: w.HTMLInputElement,

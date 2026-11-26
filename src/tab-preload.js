@@ -1,4 +1,9 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, webFrame } = require('electron');
+
+// Hide ads before the first paint: install the page-world ad script at
+// document start instead of waiting for dom-ready.
+const adblockScript = ipcRenderer.sendSync('adblock:script');
+if (adblockScript) webFrame.executeJavaScript(adblockScript).catch(() => {});
 
 // Kept in the isolated preload world; no IPC/password API is exposed to sites.
 function loginFields(scope) {
