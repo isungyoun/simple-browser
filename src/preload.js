@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('syBrowser', {
   saveSettings: (settings) => ipcRenderer.invoke('browser:save-settings', settings),
   fillPassword: () => ipcRenderer.invoke('browser:fill-password'),
   deletePassword: (id) => ipcRenderer.invoke('browser:delete-password', id),
+  openDownload: (id) => ipcRenderer.invoke('browser:open-download', id),
   revealDownload: (id) => ipcRenderer.invoke('browser:reveal-download', id),
   cancelDownload: (id) => ipcRenderer.invoke('browser:cancel-download', id),
   resumeDownload: (id) => ipcRenderer.invoke('browser:resume-download', id),
@@ -23,4 +24,9 @@ contextBridge.exposeInMainWorld('syBrowser', {
   toggleBookmark: () => ipcRenderer.invoke('browser:toggle-bookmark'),
   onState: (callback) => ipcRenderer.on('browser:state', (_event, state) => callback(state)),
   onFocusAddress: (callback) => ipcRenderer.on('browser:focus-address', callback),
+  suggest: (text, rect) => ipcRenderer.invoke('browser:suggest', text, rect),
+  selectSuggestion: (index) => ipcRenderer.invoke('browser:suggest-select', index),
+  hideSuggestions: () => ipcRenderer.invoke('browser:suggest-hide'),
+  onSuggestionPicked: (callback) => ipcRenderer.on('browser:suggest-pick', (_event, url) => callback(url)),
+  clearHistory: () => ipcRenderer.invoke('browser:clear-history'),
 });

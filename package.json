@@ -12,7 +12,7 @@
     "dist:mac:intel": "electron-builder --mac --dir --x64 && node scripts/make-mac-pkg.js x64",
     "test": "node --test",
     "test:smoke": "node scripts/run-electron.js --smoke-test",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/navigation.js && node --check src/renderer/renderer.js && node --check src/settings.js && node --check src/adblock.js && node --check src/tab-preload.js && node --check src/password-store.js && node --check src/downloads.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/navigation.js && node --check src/renderer/renderer.js && node --check src/settings.js && node --check src/adblock.js && node --check src/tab-preload.js && node --check src/password-store.js && node --check src/downloads.js && node --check src/external-apps.js && node --check src/history.js && node --check src/suggest-preload.js && node --check src/renderer/suggest.js",
     "dist:win": "electron-builder --win nsis --x64",
     "dist": "npm run dist:mac && npm run dist:win",
     "release": "node scripts/release.js"

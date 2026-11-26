@@ -131,10 +131,70 @@ function render(nextState) {
 
 elements.addressForm.addEventListener('submit', (event) => {
   event.preventDefault();
+  closeSuggestions();
   window.syBrowser.navigate(elements.address.value);
   elements.address.blur();
 });
 elements.address.addEventListener('focus', () => elements.address.select());
+
+// Address-bar suggestions from visit history. The list itself is drawn by the
+// main process above the page; this side owns typing and keyboard selection.
+const suggestion = { typed: '', items: [], selected: -1, request: 0, hideTimer: null };
+
+function closeSuggestions() {
+  suggestion.items = [];
+  suggestion.selected = -1;
+  suggestion.request++;
+  window.syBrowser.hideSuggestions();
+}
+
+async function updateSuggestions(allowInline) {
+  const typed = elements.address.value;
+  suggestion.typed = typed;
+  suggestion.selected = -1;
+  const request = ++suggestion.request;
+  const box = elements.addressForm.getBoundingClientRect();
+  const { items, inline } = await window.syBrowser.suggest(typed, { x: box.left, y: box.bottom + 4, width: box.width });
+  // Ignore answers to keystrokes the user has already typed past.
+  if (request !== suggestion.request || elements.address.value !== typed) return;
+  suggestion.items = items;
+  if (allowInline && inline && inline.length > typed.length && inline.toLowerCase().startsWith(typed.toLowerCase())) {
+    elements.address.value = typed + inline.slice(typed.length);
+    elements.address.setSelectionRange(typed.length, elements.address.value.length);
+  }
+}
+
+elements.address.addEventListener('input', (event) => {
+  // Inline completion only while typing forward at the end, never mid-IME composition.
+  const atEnd = elements.address.selectionStart === elements.address.value.length;
+  updateSuggestions(event.inputType === 'insertText' && !event.isComposing && atEnd);
+});
+elements.address.addEventListener('keydown', (event) => {
+  if (event.isComposing) return;
+  if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && suggestion.items.length) {
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    const count = suggestion.items.length;
+    suggestion.selected = ((suggestion.selected + 1 + step + count + 1) % (count + 1)) - 1;
+    elements.address.value = suggestion.selected < 0 ? suggestion.typed : suggestion.items[suggestion.selected];
+    window.syBrowser.selectSuggestion(suggestion.selected);
+  } else if (event.key === 'Escape' && suggestion.items.length) {
+    event.preventDefault();
+    elements.address.value = suggestion.typed;
+    closeSuggestions();
+  }
+});
+elements.address.addEventListener('blur', () => {
+  // Leave time for a click on the list, which takes focus from this input.
+  clearTimeout(suggestion.hideTimer);
+  suggestion.hideTimer = setTimeout(closeSuggestions, 200);
+});
+elements.address.addEventListener('focus', () => clearTimeout(suggestion.hideTimer));
+window.syBrowser.onSuggestionPicked((url) => {
+  clearTimeout(suggestion.hideTimer);
+  elements.address.value = url;
+  elements.addressForm.requestSubmit();
+});
 elements.newTab.addEventListener('click', () => window.syBrowser.newTab());
 elements.back.addEventListener('click', () => window.syBrowser.back());
 elements.forward.addEventListener('click', () => window.syBrowser.forward());
@@ -164,6 +224,7 @@ window.syBrowser.onPanelOpen((panel) => {
     document.querySelector('#homepage').value = state.settings?.homepage || '';
     document.querySelector('#block-ads').checked = Boolean(state.settings?.blockAds);
     settingsError.textContent = '';
+    document.querySelector('#history-status').textContent = '';
     document.querySelector('#homepage').focus();
   } else if (panel === 'downloads') {
     downloadsPanel.scrollTop = 0;
@@ -198,6 +259,9 @@ function renderDownloads() {
     label.textContent = `${entry.filename} · ${labels[entry.state] || entry.state}${entry.done ? '' : progress}`;
     row.append(label);
     if (entry.state === 'completed') {
+      const open = makeButton('', '열기');
+      open.addEventListener('click', () => window.syBrowser.openDownload(entry.id));
+      row.append(open);
       const button = makeButton('', '폴더에서 보기');
       button.addEventListener('click', () => window.syBrowser.revealDownload(entry.id));
       row.append(button);
@@ -235,6 +299,11 @@ function renderPasswords() {
     list.append(row);
   }
 }
+document.querySelector('#clear-history').addEventListener('click', async () => {
+  if (!confirm('방문 기록을 모두 삭제할까요?')) return;
+  await window.syBrowser.clearHistory();
+  document.querySelector('#history-status').textContent = '방문 기록을 삭제했습니다.';
+});
 document.querySelector('#settings-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   try {

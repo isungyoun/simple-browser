@@ -15,6 +15,8 @@ const {
 const { normalizeAddress, addressForDisplay } = require('./navigation');
 const { DEFAULT_SETTINGS, validateSettings, isAdRequest } = require('./settings');
 const { createPasswordStore } = require('./password-store');
+const { createExternalApps } = require('./external-apps');
+const { createHistory, stripUrl } = require('./history');
 const { trackDownloads } = require('./downloads');
 app.setName('simple-browser');
 process.title = 'simple-browser';
@@ -34,6 +36,8 @@ let settings = { ...DEFAULT_SETTINGS };
 let settingsPath;
 let activePanel = null;
 let passwordStore;
+let externalApps;
+let history;
 let downloads;
 
 async function offerPassword(event, value) {
@@ -129,6 +133,7 @@ function showSettings(open) {
 function showPanel(panel) {
   if (panel !== null && !['settings', 'downloads'].includes(panel)) return;
   activePanel = panel;
+  hideSuggestions();
   // Settings belong to the tab they were opened in; downloads are window-wide
   // and close when another tab is selected.
   const tab = tabs.get(activeTabId);
@@ -267,6 +272,7 @@ function attachTabEvents(tab) {
   contents.on('page-title-updated', (event, title) => {
     event.preventDefault();
     tab.title = title || '새 탭';
+    history.updateTitle(contents.getURL(), title);
     changed();
   });
   contents.on('page-favicon-updated', (_event, favicons) => {
@@ -276,8 +282,14 @@ function attachTabEvents(tab) {
   contents.on('did-start-loading', changed);
   contents.on('did-stop-loading', changed);
   contents.on('dom-ready', () => applyAdBlocking(contents, true));
-  contents.on('did-navigate', changed);
-  contents.on('did-navigate-in-page', changed);
+  contents.on('did-navigate', (_event, url) => {
+    history.record(url, contents.getTitle());
+    changed();
+  });
+  contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame) history.record(url, contents.getTitle());
+    changed();
+  });
   contents.on('render-process-gone', (_event, details) => {
     tab.title = details.reason === 'crashed' ? '탭이 비정상 종료됨' : '탭을 불러올 수 없음';
     changed();
@@ -303,6 +315,10 @@ function attachTabEvents(tab) {
     Menu.buildFromTemplate(items).popup({ window });
   });
   contents.setWindowOpenHandler(({ url }) => {
+    if (externalApps.isAppLink(url)) {
+      externalApps.openLink(url, contents.getURL()).catch(() => {});
+      return { action: 'deny' };
+    }
     if (!/^https?:/i.test(url) && url !== 'about:blank' && !/^blob:/i.test(url)) return { action: 'deny' };
     return {
       action: 'allow',
@@ -320,10 +336,22 @@ function attachTabEvents(tab) {
       },
     };
   });
+  // App links (receiver://, zoommtg:// ...) go to the installed program after a
+  // prompt; other non-web navigations stay blocked.
   contents.on('will-navigate', (event, url) => {
+    if (externalApps.isAppLink(url)) {
+      event.preventDefault();
+      externalApps.openLink(url, contents.getURL()).catch(() => {});
+      return;
+    }
     if (!/^https?:\/\//i.test(url) && !/^blob:/i.test(url) && url !== newTabUrl && url !== 'about:blank') {
       event.preventDefault();
     }
+  });
+  contents.on('will-frame-navigate', (event) => {
+    if (event.isMainFrame || !externalApps.isAppLink(event.url)) return;
+    event.preventDefault();
+    externalApps.openLink(event.url, contents.getURL()).catch(() => {});
   });
   attachShortcuts(contents);
 }
@@ -364,6 +392,7 @@ function activateTab(id) {
     if (previous) window.contentView.removeChildView(previous.view);
   }
   activeTabId = tab.id;
+  hideSuggestions();
   window.contentView.addChildView(tab.view);
   resizeActiveView();
   const panel = tab.settingsOpen ? 'settings' : null;
@@ -472,6 +501,50 @@ function toggleBookmark() {
   broadcastState();
 }
 
+// Address-bar suggestions render in their own view above the active tab, which
+// would otherwise cover anything the toolbar draws below itself.
+const SUGGEST_ROW_HEIGHT = 32;
+const SUGGEST_PADDING = 10;
+let suggestView = null;
+let suggestions = [];
+
+function sendSuggestions(selected) {
+  const update = () => suggestView?.webContents.send('suggest:update', { items: suggestions, selected });
+  if (suggestView.webContents.isLoading()) suggestView.webContents.once('did-finish-load', update);
+  else update();
+}
+
+function hideSuggestions() {
+  suggestions = [];
+  if (suggestView && window && !window.isDestroyed()) window.contentView.removeChildView(suggestView);
+}
+
+// Created with the window so loading it never interrupts typing.
+function createSuggestView() {
+  suggestView = new WebContentsView({
+    webPreferences: { preload: path.join(__dirname, 'suggest-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  suggestView.setBackgroundColor('#00000000');
+  // The list must never keep focus: typing stays in the address bar, and a
+  // click on a row is already handled on mousedown.
+  suggestView.webContents.on('focus', () => {
+    if (window && !window.isDestroyed()) window.webContents.focus();
+  });
+  suggestView.webContents.loadFile(path.join(__dirname, 'renderer', 'suggest.html'));
+}
+
+function showSuggestions(rect) {
+  if (!window || window.isDestroyed() || !suggestView || !suggestions.length || activePanel) return hideSuggestions();
+  const bounds = {
+    x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width),
+    height: suggestions.length * SUGGEST_ROW_HEIGHT + SUGGEST_PADDING,
+  };
+  // Re-adding moves the view above the tab view added later.
+  window.contentView.addChildView(suggestView);
+  suggestView.setBounds(bounds);
+  sendSuggestions(-1);
+}
+
 function createWindow() {
   window = new BrowserWindow({
     width: 1280,
@@ -491,8 +564,11 @@ function createWindow() {
     },
   });
   window.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  window.on('resize', resizeActiveView);
+  createSuggestView();
+  window.on('resize', () => { hideSuggestions(); resizeActiveView(); });
   window.on('closed', () => {
+    suggestView?.webContents.close();
+    suggestView = null;
     for (const tab of tabs.values()) tab.view.webContents.close();
     tabs.clear();
     window = null;
@@ -587,6 +663,31 @@ async function runSmokeTest() {
       closeTab(blankTab);
       activateTab(first);
     } finally { settings.homepage = savedHomepage; }
+    // Visited pages are suggested above the tab and inline-completed while typing;
+    // choosing one navigates the active tab.
+    const target = `http://127.0.0.1:${server.address().port}/suggest-target`;
+    await contents.loadURL(target);
+    await contents.loadURL(`http://127.0.0.1:${server.address().port}/`);
+    const typed = `127.0.0.1:${server.address().port}/sugg`;
+    window.focus();
+    window.webContents.focus();
+    const typing = await window.webContents.executeJavaScript(`(async () => {
+      const input = document.querySelector('#address');
+      input.focus();
+      input.value = ${JSON.stringify(typed)};
+      input.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: 'g' }));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return { value: input.value, start: input.selectionStart };
+    })()`);
+    assert.deepEqual(typing, { value: target.replace('http://', ''), start: typed.length });
+    assert.ok(window.contentView.children.includes(suggestView), 'suggestions must be drawn above the tab');
+    if (suggestView.webContents.isLoading()) await new Promise((resolve) => suggestView.webContents.once('did-finish-load', resolve));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.ok(await suggestView.webContents.executeJavaScript('document.querySelectorAll(".row").length') >= 1);
+    const chosen = new Promise((resolve) => contents.once('did-navigate', (_event, url) => resolve(url)));
+    await suggestView.webContents.executeJavaScript(`document.querySelector('.row').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))`);
+    assert.equal(await chosen, target);
+    assert.equal(window.contentView.children.includes(suggestView), false);
     assert.equal(await contents.executeJavaScript('typeof process'), 'undefined');
     await contents.session.cookies.set({ url: `http://127.0.0.1:${server.address().port}/`, name: 'popup-session', value: 'present' });
     const openAndCheckPopup = async (script) => {
@@ -781,6 +882,22 @@ function registerIpc() {
   });
   ipcMain.handle('browser:fill-password', trusted(fillPassword));
   ipcMain.handle('browser:delete-password', trusted((id) => { passwordStore.remove(id); broadcastState(); }));
+  ipcMain.handle('browser:suggest', trusted((text, rect) => {
+    suggestions = history.suggest(text).map((item) => ({ ...item, display: stripUrl(item.url) }));
+    if (rect && Number.isFinite(rect.x) && Number.isFinite(rect.y) && Number.isFinite(rect.width)) showSuggestions(rect);
+    else hideSuggestions();
+    return { items: suggestions.map((item) => item.url), inline: history.inlineCompletion(text) };
+  }));
+  ipcMain.handle('browser:suggest-select', trusted((index) => { if (suggestions.length) sendSuggestions(Number(index)); }));
+  ipcMain.handle('browser:suggest-hide', trusted(hideSuggestions));
+  ipcMain.handle('browser:clear-history', trusted(() => history.clear()));
+  ipcMain.on('suggest:choose', (event, index) => {
+    if (!suggestView || event.sender.id !== suggestView.webContents.id) return;
+    const url = suggestions[Number(index)]?.url;
+    hideSuggestions();
+    if (url && window && !window.isDestroyed()) window.webContents.send('browser:suggest-pick', url);
+  });
+  ipcMain.handle('browser:open-download', trusted((id) => downloads.open(id)));
   ipcMain.handle('browser:reveal-download', trusted((id) => downloads.reveal(id)));
   ipcMain.handle('browser:cancel-download', trusted((id) => downloads.cancel(id)));
   ipcMain.handle('browser:resume-download', trusted((id) => downloads.resume(id)));
@@ -804,7 +921,9 @@ app.whenReady().then(() => {
   loadBookmarks();
   loadSettings();
   passwordStore = createPasswordStore(safeStorage, path.join(app.getPath('userData'), 'passwords.enc'));
-  downloads = trackDownloads(session.fromPartition('persist:sy-browser'), { app, shell, getWindow: () => window, onChange: broadcastState, smokeTest });
+  history = createHistory(path.join(app.getPath('userData'), 'history.json'));
+  externalApps = createExternalApps({ app, shell, dialog, getWindow: () => window, file: path.join(app.getPath('userData'), 'external-apps.json') });
+  downloads = trackDownloads(session.fromPartition('persist:sy-browser'), { app, shell, getWindow: () => window, onChange: broadcastState, smokeTest, externalApps });
   if (smokeTest) fs.mkdirSync(path.join(__dirname, '..', 'outputs'), { recursive: true });
   registerIpc();
   createApplicationMenu();
@@ -818,6 +937,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+app.on('before-quit', () => history?.flush());
 
 app.on('window-all-closed', () => {
   if (!isMac()) app.quit();
