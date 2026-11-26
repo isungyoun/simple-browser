@@ -126,6 +126,10 @@ function showSettings(open) {
 function showPanel(panel) {
   if (panel !== null && !['settings', 'downloads'].includes(panel)) return;
   activePanel = panel;
+  if (panel === 'settings' && !passwordStore.loaded()) {
+    passwordStore.available();
+    broadcastState();
+  }
   tabs.get(activeTabId)?.view.setVisible(!activePanel);
   if (activePanel) window.webContents.focus();
   else activeContents()?.focus();
@@ -182,8 +186,9 @@ function appState() {
     bookmarks,
     settings,
     downloads: downloads?.list() || [],
-    passwords: passwordStore?.list() || [],
-    passwordStorageAvailable: passwordStore?.available() || false,
+    // Before first use, assume storage works so the startup state never touches the Keychain.
+    passwords: passwordStore?.loaded() ? passwordStore.list() : [],
+    passwordStorageAvailable: Boolean(passwordStore) && (!passwordStore.loaded() || passwordStore.available()),
   };
 }
 

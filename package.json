@@ -1,6 +1,6 @@
 {
   "name": "simple-browser",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "A small Chromium-based desktop browser built with Electron.",
   "main": "src/main.js",
   "type": "commonjs",

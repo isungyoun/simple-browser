@@ -40,6 +40,13 @@ try {
   const target = path.join(output, `${filename}.dmg`);
   fs.copyFileSync(image, `${target}.tmp`);
   fs.renameSync(`${target}.tmp`, target);
+  // Spotlight skips *.noindex folders, so the unpacked build app does not show
+  // up next to the installed one in Launchpad/Apps. A rename keeps the existing
+  // index entry, so copy and delete the original instead.
+  const hidden = `${appDirectory}.noindex`;
+  fs.rmSync(hidden, { recursive: true, force: true });
+  fs.cpSync(appDirectory, hidden, { recursive: true, dereference: false, verbatimSymlinks: true, preserveTimestamps: true });
+  fs.rmSync(appDirectory, { recursive: true, force: true });
 } finally {
   fs.rmSync(staging, { recursive: true, force: true });
 }

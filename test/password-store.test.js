@@ -43,3 +43,22 @@ test('encrypts at rest, scopes accounts to exact origins, persists updates and d
     assert.throws(() => unavailable.save('https://example.com', 'person', 'no-plaintext-fallback'));
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('does not touch the OS key store until a password feature is used', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'simple-password-test-'));
+  const file = path.join(directory, 'passwords.enc');
+  fs.writeFileSync(file, 'encrypted');
+  let calls = 0;
+  const safeStorage = {
+    isEncryptionAvailable: () => { calls += 1; return true; },
+    decryptString: () => { calls += 1; return '[]'; },
+  };
+  try {
+    const store = createPasswordStore(safeStorage, file);
+    assert.equal(store.loaded(), false);
+    assert.equal(calls, 0);
+    assert.equal(store.available(), true);
+    assert.equal(store.loaded(), true);
+    assert.ok(calls > 0);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
