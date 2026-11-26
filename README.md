@@ -1,5 +1,7 @@
 # simple-browser
 
+**최신 설치 파일 다운로드: [GitHub Releases (최신 버전)](https://github.com/isungyoun/simple-browser/releases/latest)** — Mac PKG·DMG, Windows EXE
+
 Electron/Chromium 기반의 가벼운 데스크톱 브라우저입니다. 설치 버전은 Node.js나 터미널 없이 실행됩니다.
 
 ## 설치 파일
